@@ -1,5 +1,0 @@
-threading.event(): one thread signals an event and other threads wait for it. manages an internal flag
-    .set() changes flag to true
-    .clear() changes flag to false
-    .wait() blocks the thread until the flag becomes true (wait(5) is way better than sleep(5))
-    .is_set() returns flag bool

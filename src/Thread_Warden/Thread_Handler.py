@@ -42,7 +42,11 @@ ideas (not required):
       need to check each other before changing any vars
 
 open source how this works
-creation/killing
+specs
+- race conditions are mostly handled by the activity_lock variable. this stops 3 child threads from modifying data in the warden at the same time
+- you can kill the warden by doing watchdog_stop_event.set()
+
+creation
 - user makes a ApiWatchdog() object and calls watchdog.start_watchdog(), this will create the actual thread
 - the thread uses start_watchdog() as its target function. when the user calls stop_watchdog(), it exits that functions while loop, which will kill the thread
 
@@ -82,14 +86,15 @@ class ApiWatchdog:
     def __init__(self):
         self.watchdog_thread = None                    # this is itself. the actual thread
         self.watchdog_stop_event = threading.Event()   # control the thread
-
+        self.activity_lock = threading.Lock()          # protect shared data. blocks actions. this is basically a 1 copy key. 
+                                                       #    1 thing can use it at a time, the rest have to wait in line for it
+        # child thread specific variables
         self.last_activity_time = time.time()          # checks api thread isn't stalled beyond timeout (update_activity())
         self.current_request_info = None               # the api request
         self.request_start_time = None                 # when it starts processing that api request
         self.is_processing_request = False
         self.thread_variable_holder = {}
-        self.activity_lock = threading.Lock()          # protect shared data. blocks actions
-        self.restart_count = 0                         # track number of restarts for stability monitoring
+        self.restart_count = 0                         # track number of restart a thread has done
         self.last_restart_time = None                  # prevent rapid restart loops
         self.api_init_function = None                  # store reference to restart API
         
