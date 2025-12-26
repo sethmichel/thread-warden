@@ -2,7 +2,7 @@ import threading
 import time
 import logging
 from typing import Dict, Optional, Callable, Any, List, Set
-from .Data_Containers import RestartPolicy, ThreadEntry
+from .Data_Containers import Restart_Policy, Thread_Entry
 from .Interfaces import Child_Thread
 
 # Configure a null handler so we don't spam if user hasn't configured logging
@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 # Supervisor that monitors registered threads and restarts them if they fail to check in.
-class ThreadWarden:
+class Thread_Warden:
     def __init__(self):
-        self._registry: Dict[str, ThreadEntry] = {}               # registry is the threads operating data
+        self._registry: Dict[str, Thread_Entry] = {}               # registry is the threads operating data
         self._restarting_threads: Set[str] = set()           # track threads currently being restarted
         self._lock = threading.RLock()                            # this prevents race conditions. stuff has to wait for the lock to unlock
         self._stop_event = threading.Event()                      # this is what stops the warden
@@ -27,11 +27,11 @@ class ThreadWarden:
             self._stop_event.clear()
             self._warden_thread = threading.Thread(
                 target=self._monitor_loop, 
-                name="ThreadWarden_Monitor", 
+                name="Thread_Warden_Monitor", 
                 daemon=True
             )
             self._warden_thread.start()
-            logger.info("ThreadWarden started monitoring.")
+            logger.info("Thread_Warden started monitoring.")
 
     '''
     CALL THIS to register and start a new child thread.
@@ -43,13 +43,13 @@ class ThreadWarden:
         timeout: Seconds without check_in before thread is considered dead (how long it can do a task before the warden kills it)
     '''
     def register_new_child(self, name: str, factory: Callable[[Optional[Dict[str, Any]]], Child_Thread], 
-                           policy: Optional[RestartPolicy] = None, timeout: float = 30.0) -> None:
+                           policy: Optional[Restart_Policy] = None, timeout: float = 30.0) -> None:
 
         with self._lock:
             if name in self._registry:
                 raise ValueError(f"Thread '{name}' is already registered.")
             
-            policy = policy or RestartPolicy() # use the preset policy or your custom policy
+            policy = policy or Restart_Policy() # use the preset policy or your custom policy
             
             # Create and start the thread
             try:
@@ -60,7 +60,7 @@ class ThreadWarden:
                 thread.name = name   # Ensure name is set on the thread object for debugging
                 thread.start()
                 
-                entry = ThreadEntry(
+                entry = Thread_Entry(
                     instance=thread,
                     factory=factory,
                     policy=policy,
@@ -88,7 +88,7 @@ class ThreadWarden:
             # If the instance checking in is not the currently managed instance (zombie), ignore it
             # This handles cases where a zombie thread wakes up and tries to report
             current_thread = threading.current_thread()
-            if entry.instance and current_thread is not entry.instance:
+            if isinstance(current_thread, Child_Thread) and entry.instance and current_thread is not entry.instance:
                 # This might happen if we restarted it but the old one isn't dead yet
                 return
 
@@ -107,7 +107,7 @@ class ThreadWarden:
     # it's possible the user wants to stop the warden but leave the child threads alive in some cases
     # very importent that you decide what to set stop_children as
     def shutdown(self, stop_children: bool = True) -> None:
-        logger.info("Shutting down ThreadWarden...")
+        logger.info("Shutting down Thread_Warden...")
         self._stop_event.set()
         
         if self._warden_thread:
@@ -182,7 +182,7 @@ class ThreadWarden:
                  return # Already being restarted by another thread
             self._restarting_threads.add(name)
             
-            backoff_time = entry.calcuate_restart_backoff_time()
+            backoff_time = entry.calculate_restart_backoff_time()
             entry.failure_count += 1
         
         try:

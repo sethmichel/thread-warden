@@ -6,7 +6,7 @@ from typing import Dict, Any, Callable, Optional
 
 @dataclass
 # how a thread should be restarted upon failure
-class RestartPolicy:
+class Restart_Policy:
     max_restarts_per_hour: int = 3
     restart_delay_seconds: float = 1.0
     enable_backoff: bool = True             # If true, delay doubles on consecutive failures
@@ -14,13 +14,13 @@ class RestartPolicy:
 
 @dataclass
 # Internal registry entry for a managed thread - basically all the threads data
-class ThreadEntry:
+class Thread_Entry:
     instance: Any                                      # Actually Child_Thread, typed as Any to avoid circular import
     factory: Callable[[Optional[Dict[str, Any]]], Any] # factory function for creating threads
                                                        #   Optional[Dict[str, Any]]] is the state. this is given to the replacement child thread
                                                        #   the last "Any" is the return value. returns a new thread instance
                                                        #   basically, this variable must be a function that accepts a state dictionary whenever we decide to run it
-    policy: RestartPolicy
+    policy: Restart_Policy
     timeout: float
     last_seen: float
     state: Optional[Dict[str, Any]] = None             # we give this to the factory. optional means it can be this or None
@@ -28,7 +28,7 @@ class ThreadEntry:
     last_restart_time: float = 0.0
 
     # Calculate wait time based on failure count and policy
-    def calcuate_restart_backoff_time(self) -> float:
+    def calculate_restart_backoff_time(self) -> float:
         if not self.policy.enable_backoff:
             return self.policy.restart_delay_seconds
         

@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 # abc is a python library for abstract base classes
 
 '''
-Abstract base class for threads managed by the ThreadWarden
+Abstract base class for threads managed by the Thread_Warden
 
 Subclasses must:
     1. Accept restored_state in __init__
