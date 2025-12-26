@@ -180,6 +180,13 @@ class Thread_Warden:
             # Double check to prevent race conditions
             if name in self._restarting_threads:
                  return # Already being restarted by another thread
+            
+            # Check if thread has already been recovered (e.g. by another restart thread that won the race)
+            # This handles cases where multiple monitor loops triggered restarts before one could acquire the lock
+            if (time.time() - entry.last_seen) < entry.timeout and entry.instance.is_alive():
+                 logger.info(f"Thread '{name}' appears recovered. Skipping redundant restart.")
+                 return
+
             self._restarting_threads.add(name)
             
             backoff_time = entry.calculate_restart_backoff_time()
